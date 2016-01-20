@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import calendar
 from ch_util import tools
 from ch_util import ni_utils
+from ch_util import andata
 
 from numpy import *
 from scipy import constants
@@ -52,10 +53,12 @@ class TransitPhase(object):
 
         self.ts = starttime + (offset / ephem.second)
 
-    def read_transit_data(self):
+    def read_transit_data(self, freq=None):
         t_bin = argmin(abs(self.data.time - self.ts))
         sdata = andata.Reader(self.data.files[t_bin//1024])
-        sdata.select_time_range(self.ts - 10*60 if (self.ts - 10*60) > data.time[0] else data.time[0], self.ts + 10*60)
+        if freq is not None:
+            sdata.select_freq_range(freq)
+        sdata.select_time_range(self.ts - 10*60 if (self.ts - 10*60) > self.data.time[0] else self.data.time[0], self.ts + 10*60)
         if self.bl is not None:
             sdata.select_prod_pairs(self.bl)
         self.read_data = ni_utils.process_synced_data(sdata.read())
@@ -96,10 +99,10 @@ class TransitPhase(object):
         bl = array((bl2d[0],bl2d[1],0.0))
         return bl
     
-    def run(self, day_num = 0):
-        self.set_up = 1
+    def run(self, day_num = 0, freq = None):
+        self.set_up = True
         self.transit_time(day_num)
-        self.read_transit_data()
+        self.read_transit_data(freq)
         self.transit_phase()
         self.max_phase()
     
