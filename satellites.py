@@ -26,7 +26,7 @@ class TransitPhase(object):
     baselines: antenna pairs to use
     name: (optional) overwrite name of ephemeris object (used because the ch_util objects all are named 'None')
     '''
-    def __init__(self, body, data, baselines, observer, name = None):
+    def __init__(self, body, data, baselines = None, observer = chime, name = None):
         self.set_up = 0
         self.body = body
         self.data = data
@@ -56,7 +56,8 @@ class TransitPhase(object):
         t_bin = argmin(abs(self.data.time - self.ts))
         sdata = andata.Reader(self.data.files[t_bin//1024])
         sdata.select_time_range(self.ts - 10*60 if (self.ts - 10*60) > data.time[0] else data.time[0], self.ts + 10*60)
-        sdata.select_prod_pairs(self.bl)
+        if self.bl is not None:
+            sdata.select_prod_pairs(self.bl)
         self.read_data = ni_utils.process_synced_data(sdata.read())
         
     def transit_phase(self):
@@ -144,7 +145,7 @@ class TransitPhase(object):
 
 class SatellitePhase(TransitPhase):
     '''Subclass of TransitPhase that gets the phase of a satellite instead of a fixed source'''
-    def __init__(self, tle, data, baselines, observer, name = None):
+    def __init__(self, tle, data, baselines = None , observer = chime, name = None):
         self.set_up = 0
         self.body = ephem.readtle(*tle)
         self.data = data
@@ -182,7 +183,8 @@ class SatellitePhase(TransitPhase):
         sdata = andata.Reader(self.data.files[t_bin//1024])
         rise_ts = calendar.timegm(self.riset.tuple()) if self.riset < self.sett else self.data.time[0]
         sdata.select_time_range(rise_ts, calendar.timegm(self.sett.tuple()))
-        sdata.select_prod_pairs(self.bl)
+        if self.bl is not None:
+            sdata.select_prod_pairs(self.bl)
 #         self.read_data = ni_utils.process_synced_data(sdata.read())    
         self.read_data = sdata.read()
     
