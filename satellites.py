@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import calendar
 from ch_util import tools
 from ch_util import ni_utils
-from ch_util import data_quality
 
+from numpy import *
 from scipy import constants
 from scipy import stats
 
