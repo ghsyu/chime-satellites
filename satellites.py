@@ -11,7 +11,6 @@ from numpy import *
 from scipy import constants
 from scipy import stats
 
-
 #Define a chime observer for pyephem
 chime = ephem.Observer()
 chime.lat = '49:19:15.6'
@@ -57,7 +56,7 @@ class TransitPhase(object):
         t_bin = argmin(abs(self.data.time - self.ts))
         sdata = andata.Reader(self.data.files[t_bin//1024])
         if freq is not None:
-            sdata.select_freq_range(freq)
+            sdata.select_freq_physical(freq)
         sdata.select_time_range(self.ts - 10*60 if (self.ts - 10*60) > self.data.time[0] else self.data.time[0], self.ts + 10*60)
         if self.bl is not None:
             sdata.select_prod_pairs(self.bl)
@@ -73,15 +72,14 @@ class TransitPhase(object):
         transit = argmax(sum(abs(self.read_data.vis[:,:,guess-10:guess+11]),axis=1),axis=1) + guess - 10
         self.phase_from_max = angle(self.read_data.vis[:,:,transit])
         self.phase_max_f = angle(self.read_data.vis[xrange(self.read_data.vis.shape[0]),:,transit])
-        
+
     def get_bl(self, ant_0, ant_1):
         feeds = []
         self.phys_bl = []
         inputs = zip(*self.read_data.index_map['input'])[1]
-        for i in array(tools.get_correlator_inputs(self.dt)):
+        for i in self.layout:
             if i.input_sn in (inputs[ant_0], inputs[ant_1]):
                 feeds.append(i)
-
         pos0, pos1 = tools.get_feed_positions(feeds)
         bl2d = pos1-pos0
         bl = array((bl2d[0],bl2d[1],0.0))
@@ -105,7 +103,7 @@ class TransitPhase(object):
         self.read_transit_data(freq)
         self.transit_phase()
         self.max_phase()
-    
+
     def altaz_to_rec(self, alt, az):
         return array((sin(az)*cos(alt),cos(az)*cos(alt),sin(alt)))
     
@@ -121,16 +119,54 @@ class TransitPhase(object):
         self.body.compute(self.observer)
         return self.altaz_to_rec(self.body.alt, self.body.az)
     
+    def all_coords(self):
+        coords= []
+        for t in self.read_data.time:
+            self.observer.date = ephem.Date(datetime.utcfromtimestamp(t))
+            self.body.compute(self.observer)
+            coords.append(self.altaz_to_rec(self.body.alt, self.body.az))
+        return array(coords)
+    
     def expected_phase(self):
         output = []
+        self.layout = array(tools.get_correlator_inputs(self.dt))
         if not self.set_up:
             self.transit_time()
             self.read_transit_data()
-        for baseline in self.bl:
-            bl_vector = self.get_bl(*baseline)
-            freqs = array([i[0] for i in self.data.freq])
-            bdots = dot(self.transit_coords(), bl_vector)
-            output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
+        if self.bl is not None:
+            for baseline in self.bl:
+                bl_vector = self.get_bl(*baseline)
+                freqs = array([i[0] for i in self.data.freq])
+                bdots = dot(self.transit_coords(), bl_vector)
+                output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
+        else:
+            for ii in xrange(256):
+                for jj in xrange(i,256):
+                    bl_vector = self.get_bl(ii,jj)
+                    freqs = array([i[0] for i in self.data.freq])
+                    bdots = dot(self.transit_coords(), bl_vector)
+                    output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
+        return output
+    
+    def all_phases(self):
+         output = []
+        self.layout = array(tools.get_correlator_inputs(self.dt))
+        if not self.set_up:
+            self.transit_time()
+            self.read_transit_data()
+        if self.bl is not None:
+            for baseline in self.bl:
+                bl_vector = self.get_bl(*baseline)
+                freqs = array([i[0] for i in self.data.freq])
+                bdots = dot(self.all_coords(), bl_vector)
+                output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
+        else:
+            for ii in xrange(256):
+                for jj in xrange(i,256):
+                    bl_vector = self.get_bl(ii,jj)
+                    freqs = array([i[0] for i in self.data.freq])
+                    bdots = dot(self.all_coords(), bl_vector)
+                    output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
         return output
     
     def expected_phase_fbl(self, filename):
@@ -144,7 +180,7 @@ class TransitPhase(object):
             bdots = dot(self.transit_coords(), bl_vector)
             output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
         return output
-        
+
 
 class SatellitePhase(TransitPhase):
     '''Subclass of TransitPhase that gets the phase of a satellite instead of a fixed source'''
@@ -180,7 +216,7 @@ class SatellitePhase(TransitPhase):
         offset = self.observer.date - ephem.Date(datetime.utcfromtimestamp(starttime))
         self.dt = self.observer.date.datetime()
         self.ts = starttime + (offset / ephem.second)
-    
+
     def read_transit_data(self):
         t_bin = argmin(abs(self.data.time - self.ts))
         sdata = andata.Reader(self.data.files[t_bin//1024])
@@ -190,7 +226,7 @@ class SatellitePhase(TransitPhase):
             sdata.select_prod_pairs(self.bl)
 #         self.read_data = ni_utils.process_synced_data(sdata.read())    
         self.read_data = sdata.read()
-    
+
     def all_coords(self,offset=(0,0)):
         coords= []
         for t in self.read_data.time:
@@ -206,7 +242,7 @@ class SatellitePhase(TransitPhase):
             bdots = dot(self.all_coords(offset), bl_vector)
             output.append(2*constants.pi*bdots*(freq*10**6)/constants.c)
         return output
-       
+
     def show_path(self):
         coords= []
         for t in self.read_data.time:
@@ -214,7 +250,7 @@ class SatellitePhase(TransitPhase):
             self.body.compute(self.observer)
             coords.append((self.body.alt, self.body.az))
         return coords
-    
+
     def show_path_amp(self, channel = 0, freq = 928):
         coords= []
         for t in self.read_data.time:
@@ -222,8 +258,7 @@ class SatellitePhase(TransitPhase):
             self.body.compute(self.observer)
             coords.append((self.body.alt, self.body.az, abs(self.read_data.vis[freq, channel, where(self.read_data.time == t),])))
         return coords
-    
+
     def next(self):
         self.observer.date += .005
         return self.run()
-    
