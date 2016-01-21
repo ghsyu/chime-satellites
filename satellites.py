@@ -80,6 +80,8 @@ class TransitPhase(object):
         for i in self.layout:
             if i.input_sn in (inputs[ant_0], inputs[ant_1]):
                 feeds.append(i)
+                if ant_0 == ant_1:
+                    feeds.append(i)
         pos0, pos1 = tools.get_feed_positions(feeds)
         bl2d = pos1-pos0
         bl = array((bl2d[0],bl2d[1],0.0))
