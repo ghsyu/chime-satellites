@@ -148,8 +148,8 @@ class TransitPhase(object):
                     output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
         return output
     
-    def all_phases(self):
-         output = []
+    def pass_phases(self):
+        output = []
         self.layout = array(tools.get_correlator_inputs(self.dt))
         if not self.set_up:
             self.transit_time()
@@ -162,9 +162,9 @@ class TransitPhase(object):
                 output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
         else:
             for ii in xrange(256):
-                for jj in xrange(i,256):
+                for jj in xrange(ii,256):
                     bl_vector = self.get_bl(ii,jj)
-                    freqs = array([i[0] for i in self.data.freq])
+                    freqs = array([f[0] for f in self.data.freq])
                     bdots = dot(self.all_coords(), bl_vector)
                     output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
         return output
