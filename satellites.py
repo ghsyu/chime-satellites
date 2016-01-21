@@ -140,7 +140,7 @@ class TransitPhase(object):
                 bl_vector = self.get_bl(*baseline)
                 freqs = array([i[0] for i in self.data.freq])
                 bdots = dot(self.transit_coords(), bl_vector)
-                output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
+                output.append(2*constants.pi*bdots*(freq*10**6)/constants.c)
         else:
             for ii in xrange(256):
                 for jj in xrange(i,256):
@@ -161,14 +161,16 @@ class TransitPhase(object):
                 bl_vector = self.get_bl(*baseline)
                 freqs = array([i[0] for i in self.data.freq])
                 bdots = dot(self.all_coords(), bl_vector)
-                output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
+                for f in freqs:
+                    output.append(2*constants.pi*bdots*(f*10**6)/constants.c)
         else:
             for ii in xrange(256):
                 for jj in xrange(ii,256):
                     bl_vector = self.get_bl(ii,jj)
                     freqs = array([f[0] for f in self.data.freq])
                     bdots = dot(self.all_coords(), bl_vector)
-                    output.append(2*constants.pi*bdots*(freqs*10**6)/constants.c)
+                    for f in freqs:
+                        output.append(2*constants.pi*bdots*(f*10**6)/constants.c)
         return output
     
     def expected_phase_fbl(self, filename):
