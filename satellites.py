@@ -159,7 +159,7 @@ class TransitPhase(object):
         if self.bl is not None:
             for baseline in self.bl:
                 bl_vector = self.get_bl(*baseline)
-                freqs = array([i[0] for i in self.data.freq])
+                freqs = [i[0] for i in self.data.freq]
                 bdots = dot(self.all_coords(), bl_vector)
                 for f in freqs:
                     output.append(2*constants.pi*bdots*(f*10**6)/constants.c)
@@ -167,12 +167,12 @@ class TransitPhase(object):
             for ii in xrange(256):
                 for jj in xrange(ii,256):
                     bl_vector = self.get_bl(ii,jj)
-                    freqs = array([f[0] for f in self.data.freq])
+                    freqs = [i[0] for i in self.data.freq]
                     bdots = dot(self.all_coords(), bl_vector)
                     for f in freqs:
                         output.append(2*constants.pi*bdots*(f*10**6)/constants.c)
         return output
-    
+
     def expected_phase_fbl(self, filename):
         output = []
         if not self.set_up:
@@ -220,10 +220,13 @@ class SatellitePhase(TransitPhase):
         offset = self.observer.date - ephem.Date(datetime.utcfromtimestamp(starttime))
         self.dt = self.observer.date.datetime()
         self.ts = starttime + (offset / ephem.second)
-
-    def read_transit_data(self):
+        
+    def read_transit_data(self, freq=None):
         t_bin = argmin(abs(self.data.time - self.ts))
         sdata = andata.Reader(self.data.files[t_bin//1024])
+        if freq is not None:
+            sdata.select_freq_physical(freq)
+        
         rise_ts = calendar.timegm(self.riset.tuple()) if self.riset < self.sett else self.data.time[0]
         sdata.select_time_range(rise_ts, calendar.timegm(self.sett.tuple()))
         if self.bl is not None:
