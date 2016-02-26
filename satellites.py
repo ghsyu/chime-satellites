@@ -226,7 +226,6 @@ class SatellitePhase(TransitPhase):
         sdata = andata.Reader(self.data.files[t_bin//1024])
         if freq is not None:
             sdata.select_freq_physical(freq)
-        
         rise_ts = calendar.timegm(self.riset.tuple()) if self.riset < self.sett else self.data.time[0]
         sdata.select_time_range(rise_ts, calendar.timegm(self.sett.tuple()))
         if self.bl is not None:
@@ -243,6 +242,7 @@ class SatellitePhase(TransitPhase):
         return array(coords)
         
     def sat_phase(self,freq,offset=(0,0)):
+        self.layout = array(tools.get_correlator_inputs(self.dt))
         output = []
         for baseline in self.bl:
             bl_vector = self.get_bl(*baseline)
